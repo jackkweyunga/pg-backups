@@ -217,6 +217,8 @@ else
     log "Rsync disabled (RSYNC_ENABLED=false)"
 fi
 
+
+
 # =============================================================================
 # 6. CLEAN UP OLD LOCAL BACKUPS
 # =============================================================================
@@ -236,5 +238,44 @@ BACKUP_COUNT=$(find "$BACKUP_DIR" -name "postgres_*.sql.gz" -type f | wc -l)
 TOTAL_FOLDERS=$(find "$BACKUP_BASE_DIR" -maxdepth 1 -type d -name "20*" | wc -l)
 log "Current backup: $BACKUP_COUNT files, $BACKUP_SIZE"
 log "Total backup folders: $TOTAL_FOLDERS"
+
+# =============================================================================
+# 8. SEND NOTIFICATION TO ROCKET CHAT
+# =============================================================================
+if [ "$COMS_ENABLED" = "true" ]; then
+    log "=== Sending notification to Coms ==="
+    
+    if [ -z "$COM_BASE_URL" ] || [ -z "$COM_USER_ID" ] || [ -z "$COM_AUTH_TOKEN" ] || [ -z "$COMS_ROOM_ID" ]; then
+        log "✗ ERROR: Coms configuration incomplete (missing required variables)"
+    else
+        log "Sending notification to Coms: $COM_BASE_URL"
+        
+        # Prepare notification message with backup details
+        NOTIFICATION_TEXT="PostgreSQL Backup Completed Successfully
+
+📅 **Timestamp:** ${TIMESTAMP}
+🖥️ **Host:** ${PGHOST}:${PGPORT}
+📦 **Backup Size:** ${BACKUP_SIZE}
+📁 **Files Created:** ${BACKUP_COUNT} backups
+
+**Storage:**$([ "$S3_ENABLED" = "true" ] && echo " ✅ S3/Spaces" || echo " ❌ S3/Spaces")$([ "$RSYNC_ENABLED" = "true" ] && echo " ✅ Remote Sync" || echo " ❌ Remote Sync") ✅ Local
+
+📂 **Total Backup Folders:** ${TOTAL_FOLDERS}
+🧹 **Retention:** Local(${LOCAL_RETENTION}d) S3(${S3_RETENTION}d) Remote(${RSYNC_RETENTION}d)"
+        
+        if curl --location "${COM_BASE_URL}/api/v1/chat.postMessage" \
+            --header "X-User-Id: ${COM_USER_ID}" \
+            --header "X-Auth-Token: ${COM_AUTH_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{\"emoji\": \":floppy_disk:\",\"roomId\": \"${COMS_ROOM_ID}\",\"text\": \"${NOTIFICATION_TEXT}\",\"attachments\": []}" \
+            --silent --show-error; then
+            log "✓ COMS notification sent successfully"
+        else
+            log "✗ ERROR: Failed to send COMS notification"
+        fi
+    fi
+else
+    log "COMS notification disabled (COMS_ENABLED=false)"
+fi
 
 log "=== Backup Completed Successfully ==="
