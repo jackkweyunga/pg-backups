@@ -26,8 +26,9 @@ jobs:
 
     strategy:
       matrix:
-        pg_version:
+        postgres_tag:
           - '17-alpine'
+          - '18-alpine'
         image_type:
           - 'backup'
           - 'restore'
@@ -65,16 +66,18 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}${{ steps.image_name.outputs.suffix }}
           tags: |
-            type=raw,value=${{ matrix.pg_version }}
+            type=raw,value=${{ matrix.postgres_tag }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.${{ matrix.image_type }}-${{ matrix.pg_version }}
+          file: ./Dockerfile.${{ matrix.image_type }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.image_type }}-${{ matrix.pg_version }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image_type }}-${{ matrix.pg_version }}
+          build-args: |
+            POSTGRES_TAG=${{ matrix.postgres_tag }}
+          cache-from: type=gha,scope=${{ matrix.image_type }}-${{ matrix.postgres_tag }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image_type }}-${{ matrix.postgres_tag }}
 

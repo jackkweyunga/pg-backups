@@ -1,7 +1,10 @@
+ARG POSTGRES_TAG=17-alpine
 FROM docker:27-cli
 
 # Install bash and coreutils
-RUN apk add --no-cache bash coreutils
+RUN apk add --no-cache bash coreutils curl
+
+
 
 # Create log directory
 RUN mkdir -p /restore-test-logs
@@ -13,7 +16,8 @@ COPY restore-test.sh /usr/local/bin/restore-test.sh
 RUN chmod +x /usr/local/bin/restore-test.sh
 
 # Environment variables with defaults
-ENV TEST_SCHEDULE="0 0 1 * *"
+ENV TEST_SCHEDULE="0 0 1 * *" \
+    POSTGRES_TAG=${POSTGRES_TAG}
 
 # Default command - run test immediately, then schedule with cron
 CMD /usr/local/bin/restore-test.sh && \

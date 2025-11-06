@@ -701,20 +701,32 @@ pg-backups/
 
 ### Docker Images
 
+Three Docker images built via GitHub Actions matrix for multiple PostgreSQL versions:
+
 1. **Backup Image** - `ghcr.io/jackkweyunga/pg-backups:17-alpine`
-   - Automated scheduled backups
-   - Runs as a service with cron
+   - Automated scheduled backups with cron
+   - Supports S3, remote sync, notifications
 
 2. **Restore Image** - `ghcr.io/jackkweyunga/pg-backups-restore:17-alpine`
-   - Interactive restore tool
-   - Run on-demand for recovery
+   - Interactive CLI for backup restoration
+   - Supports local, S3, remote sources
 
 3. **Restore Test Image** - `ghcr.io/jackkweyunga/pg-backups-restore-test:17-alpine`
-   - Automated restore testing
-   - Validates backups monthly
-   - Creates timestamped log files
+   - Monthly automated restore validation
+   - Creates test containers and verifies backups
 
-All images built automatically via GitHub Actions.
+**GitHub Actions Matrix:**
+Workflow builds for PostgreSQL versions defined in matrix:
+- `17-alpine`
+- `18-alpine`
+
+To add more versions, edit `.github/workflows/docker-publish.yml` matrix.
+
+**Manual Build:**
+```bash
+# Build with custom PostgreSQL version
+docker build --build-arg POSTGRES_TAG=18.0-latest -f Dockerfile.backup -t pg-backups:18 .
+```
 
 ---
 

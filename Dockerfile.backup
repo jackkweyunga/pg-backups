@@ -1,11 +1,14 @@
-FROM postgres:17-alpine
+ARG POSTGRES_TAG=17-alpine
+FROM postgres:${POSTGRES_TAG}
 
 # Install required dependencies
 RUN apk add --no-cache \
     aws-cli \
     openssh-client \
     rsync \
+    curl \
     bash
+
 
 # Create backup directory
 RUN mkdir -p /backups /var/log

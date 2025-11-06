@@ -18,10 +18,10 @@ BACKUP_FOLDER=$(ls -t backups/ | head -1)
 echo "Testing restore of backup: $BACKUP_FOLDER"
 
 # Create test container
+POSTGRES_TAG=${POSTGRES_TAG:-17-alpine}
 docker run -d --name postgres-test \
     -e POSTGRES_PASSWORD=test \
-    postgis/postgis:17-3.5
-    # postgres:17-alpine
+    postgres:${POSTGRES_TAG}
 
 sleep 5
 

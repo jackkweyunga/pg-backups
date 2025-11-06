@@ -1,4 +1,5 @@
-FROM postgres:17-alpine
+ARG POSTGRES_TAG=17-alpine
+FROM postgres:${POSTGRES_TAG}
 
 # Install required dependencies
 RUN apk add --no-cache \
@@ -6,6 +7,7 @@ RUN apk add --no-cache \
     openssh-client \
     rsync \
     bash \
+    curl \
     coreutils
 
 # Create directories
