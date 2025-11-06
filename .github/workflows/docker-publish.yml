@@ -18,7 +18,32 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      pg_tags: ${{ steps.set-matrix.outputs.pg_tags }}
+    steps:
+      - name: Set matrix from secret
+        id: set-matrix
+        run: |
+          # Get PostgreSQL tags from secret (comma-separated like "17-alpine,18.0-latest,19-alpine")
+          TAGS="${{ secrets.POSTGRES_TAGS }}"
+          
+          # Secret must be set
+          if [ -z "$TAGS" ]; then
+            echo "ERROR: POSTGRES_TAGS secret is not set!"
+            echo "Please set the POSTGRES_TAGS secret with comma-separated PostgreSQL tags (e.g., '17-alpine,18.0-latest,19-alpine')"
+            exit 1
+          fi
+          
+          # Convert comma-separated string to JSON array
+          JSON_ARRAY=$(echo "$TAGS" | jq -R 'split(",") | map(select(length > 0))')
+          
+          echo "pg_tags=$JSON_ARRAY" >> $GITHUB_OUTPUT
+          echo "PostgreSQL tags to build: $JSON_ARRAY"
+
   build-and-push:
+    needs: prepare-matrix
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,8 +51,7 @@ jobs:
 
     strategy:
       matrix:
-        pg_version:
-          - '17-alpine'
+        pg_tag: ${{ fromJSON(needs.prepare-matrix.outputs.pg_tags) }}
         image_type:
           - 'backup'
           - 'restore'
@@ -65,16 +89,18 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}${{ steps.image_name.outputs.suffix }}
           tags: |
-            type=raw,value=${{ matrix.pg_version }}
+            type=raw,value=${{ matrix.pg_tag }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.${{ matrix.image_type }}-${{ matrix.pg_version }}
+          file: ./Dockerfile.${{ matrix.image_type }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.image_type }}-${{ matrix.pg_version }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image_type }}-${{ matrix.pg_version }}
+          build-args: |
+            POSTGRES_TAG=${{ matrix.pg_tag }}
+          cache-from: type=gha,scope=${{ matrix.image_type }}-${{ matrix.pg_tag }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image_type }}-${{ matrix.pg_tag }}
 
