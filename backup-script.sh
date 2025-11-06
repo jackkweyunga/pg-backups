@@ -217,6 +217,8 @@ else
     log "Rsync disabled (RSYNC_ENABLED=false)"
 fi
 
+
+
 # =============================================================================
 # 6. CLEAN UP OLD LOCAL BACKUPS
 # =============================================================================
@@ -236,5 +238,44 @@ BACKUP_COUNT=$(find "$BACKUP_DIR" -name "postgres_*.sql.gz" -type f | wc -l)
 TOTAL_FOLDERS=$(find "$BACKUP_BASE_DIR" -maxdepth 1 -type d -name "20*" | wc -l)
 log "Current backup: $BACKUP_COUNT files, $BACKUP_SIZE"
 log "Total backup folders: $TOTAL_FOLDERS"
+
+# =============================================================================
+# 8. SEND NOTIFICATION TO ROCKET CHAT
+# =============================================================================
+if [ "$ROCKET_CHAT_ENABLED" = "true" ]; then
+    log "=== Sending notification to Rocket Chat ==="
+    
+    if [ -z "$ROCKET_CHAT_BASE_URL" ] || [ -z "$ROCKET_CHAT_USER_ID" ] || [ -z "$ROCKET_CHAT_AUTH_TOKEN" ] || [ -z "$ROCKET_CHAT_ROOM_ID" ]; then
+        log "✗ ERROR: Rocket Chat configuration incomplete (missing required variables)"
+    else
+        log "Sending notification to Rocket Chat: $ROCKET_CHAT_BASE_URL"
+        
+        # Prepare notification message with backup details
+        NOTIFICATION_TEXT="PostgreSQL Backup Completed Successfully
+
+📅 **Timestamp:** ${TIMESTAMP}
+🖥️ **Host:** ${PGHOST}:${PGPORT}
+📦 **Backup Size:** ${BACKUP_SIZE}
+📁 **Files Created:** ${BACKUP_COUNT} backups
+
+**Storage:**$([ "$S3_ENABLED" = "true" ] && echo " ✅ S3/Spaces" || echo " ❌ S3/Spaces")$([ "$RSYNC_ENABLED" = "true" ] && echo " ✅ Remote Sync" || echo " ❌ Remote Sync") ✅ Local
+
+📂 **Total Backup Folders:** ${TOTAL_FOLDERS}
+🧹 **Retention:** Local(${LOCAL_RETENTION}d) S3(${S3_RETENTION}d) Remote(${RSYNC_RETENTION}d)"
+        
+        if curl --location "${ROCKET_CHAT_BASE_URL}/api/v1/chat.postMessage" \
+            --header "X-User-Id: ${ROCKET_CHAT_USER_ID}" \
+            --header "X-Auth-Token: ${ROCKET_CHAT_AUTH_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{\"emoji\": \":floppy_disk:\",\"roomId\": \"${ROCKET_CHAT_ROOM_ID}\",\"text\": \"${NOTIFICATION_TEXT}\",\"attachments\": []}" \
+            --silent --show-error; then
+            log "✓ Rocket Chat notification sent successfully"
+        else
+            log "✗ ERROR: Failed to send Rocket Chat notification"
+        fi
+    fi
+else
+    log "Rocket Chat notification disabled (ROCKET_CHAT_ENABLED=false)"
+fi
 
 log "=== Backup Completed Successfully ==="
