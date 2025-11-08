@@ -251,17 +251,7 @@ if [ "$ROCKET_CHAT_ENABLED" = "true" ]; then
         log "Sending notification to Rocket Chat: $ROCKET_CHAT_BASE_URL"
         
         # Prepare notification message with backup details
-        NOTIFICATION_TEXT="PostgreSQL Backup Completed Successfully
-
-📅 **Timestamp:** ${TIMESTAMP}
-🖥️ **Host:** ${PGHOST}:${PGPORT}
-📦 **Backup Size:** ${BACKUP_SIZE}
-📁 **Files Created:** ${BACKUP_COUNT} backups
-
-**Storage:**$([ "$S3_ENABLED" = "true" ] && echo " ✅ S3/Spaces" || echo " ❌ S3/Spaces")$([ "$RSYNC_ENABLED" = "true" ] && echo " ✅ Remote Sync" || echo " ❌ Remote Sync") ✅ Local
-
-📂 **Total Backup Folders:** ${TOTAL_FOLDERS}
-🧹 **Retention:** Local(${LOCAL_RETENTION}d) S3(${S3_RETENTION}d) Remote(${RSYNC_RETENTION}d)"
+        NOTIFICATION_TEXT="PostgreSQL Backup Completed Successfully\n\n**Timestamp:** ${TIMESTAMP}\n**Host:** ${PGHOST}:${PGPORT}\n**Backup Size:** ${BACKUP_SIZE}\n**Files Created:** ${BACKUP_COUNT} backups\n\n**Storage:**$([ "$S3_ENABLED" = "true" ] && echo " ✅ S3/Spaces" || echo " ❌ S3/Spaces")$([ "$RSYNC_ENABLED" = "true" ] && echo " ✅ Remote Sync" || echo " ❌ Remote Sync") ✅ Local\n\n📂 **Total Backup Folders:** ${TOTAL_FOLDERS}\n🧹 **Retention:** Local(${LOCAL_RETENTION}d) S3(${S3_RETENTION}d) Remote(${RSYNC_RETENTION}d)"
         
         if curl --location "${ROCKET_CHAT_BASE_URL}/api/v1/chat.postMessage" \
             --header "X-User-Id: ${ROCKET_CHAT_USER_ID}" \
